@@ -10,6 +10,24 @@
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3069/3069172.png">
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fredoka+One&display=swap" rel="stylesheet">
+
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-MXNYTSF79X"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-MXNYTSF79X');
+
+      // Track PWA Installs
+      window.addEventListener('appinstalled', () => {
+        gtag('event', 'pwa_install', {
+          'event_category': 'App',
+          'event_label': 'User installed the app'
+        });
+        console.log('Panda RPG was installed');
+      });
+    </script>
     <style>
         :root {
             --bg-color: #f3f4f6;
@@ -77,7 +95,7 @@
         .panel-right { border-right: none; border-left: 1px solid var(--border); background: #f9fafb; justify-content: space-between; }
         .panel-middle { background: var(--bg-color); padding: 2rem; position: relative; }
 
-        /* --- MOBILE NAVIGATION (Hidden on Desktop) --- */
+        /* --- MOBILE NAVIGATION --- */
         .mobile-nav {
             display: none;
             position: fixed; bottom: 0; left: 0; width: 100%;
@@ -96,26 +114,20 @@
         /* --- RESPONSIVE LOGIC --- */
         @media (max-width: 900px) {
             #app-grid {
-                display: none; /* Controlled by JS flex */
+                display: none; 
                 grid-template-columns: 1fr;
                 grid-template-rows: 1fr;
-                height: calc(100vh - 65px); /* Space for nav */
+                height: calc(100vh - 65px); 
             }
-            
             .panel { 
-                display: none; /* Hide all by default on mobile */
+                display: none; 
                 width: 100%; 
                 border: none;
-                padding-bottom: 80px; /* Scroll space */
+                padding-bottom: 80px; 
             }
-            
-            /* The 'active' class determines which panel shows on mobile */
             .panel.active-panel { display: flex; }
-            
             .mobile-nav { display: flex; }
             .panel-middle { padding: 1rem; }
-            
-            /* Adjustments for touch */
             .btn-shop { padding: 10px; }
             .task-card { padding: 1rem; }
         }
@@ -206,6 +218,33 @@
             width: 100%; padding: 12px; background: white; border: 1px solid var(--danger);
             color: var(--danger); border-radius: 8px; cursor: pointer; font-weight: 600;
         }
+
+        /* --- FOOTER (Donations/Ratings) --- */
+        .footer-container { margin-top: 20px; text-align: center; }
+        .divider { border: 0; border-top: 1px solid var(--border); margin: 20px 0; }
+        .footer-label { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); margin-bottom: 5px; }
+        .stars { font-size: 1.8rem; color: #d1d5db; cursor: pointer; display: inline-block; }
+        .star { transition: color 0.2s; }
+        .star:hover, .star.active { color: #fbbf24; }
+        
+        .action-row { display: flex; gap: 10px; margin-bottom: 10px; }
+        .btn-footer {
+            flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border);
+            background: white; cursor: pointer; font-size: 0.85rem; font-weight: 600;
+            text-decoration: none; color: var(--text-main); display: flex; 
+            justify-content: center; align-items: center; gap: 5px;
+        }
+        .btn-footer:hover { background: #f9fafb; border-color: var(--text-muted); }
+        
+        .btn-donate {
+            display: flex; justify-content: center; align-items: center; gap: 8px;
+            width: 100%; padding: 12px; background: #FFDD00;
+            color: #000; font-weight: 700; border-radius: 30px;
+            text-decoration: none; margin-bottom: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.2s;
+        }
+        .btn-donate:hover { transform: translateY(-2px); box-shadow: 0 6px 8px rgba(0,0,0,0.15); }
+        .copyright { font-size: 0.7rem; color: var(--text-muted); opacity: 0.7; margin-bottom: 10px; }
 
         /* PANDA CSS */
         .panda-wrapper { position: relative; width: 100px; height: 100px; transition: transform 0.3s; }
@@ -347,6 +386,37 @@
                     <p class="quote-author" id="quote-author">-</p>
                 </div>
 
+                <div class="footer-container">
+                    <hr class="divider">
+                    
+                    <div class="rating-box">
+                        <p class="footer-label">Rate your experience</p>
+                        <div class="stars" id="star-container">
+                            <span class="star" onclick="ui.rate(1)">★</span>
+                            <span class="star" onclick="ui.rate(2)">★</span>
+                            <span class="star" onclick="ui.rate(3)">★</span>
+                            <span class="star" onclick="ui.rate(4)">★</span>
+                            <span class="star" onclick="ui.rate(5)">★</span>
+                        </div>
+                        <p id="rate-msg" style="font-size: 0.75rem; color: var(--accent); height: 1em;"></p>
+                    </div>
+
+                    <div class="action-row">
+                        <button class="btn-footer btn-share" onclick="ui.shareApp()">
+                            📤 Share
+                        </button>
+                        <a href="mailto:whitedevil2188@gmail.com?subject=Panda RPG Feedback" class="btn-footer btn-email">
+                            📧 Feedback
+                        </a>
+                    </div>
+
+                    <a href="https://www.buymeacoffee.com/YOUR_USERNAME" target="_blank" class="btn-donate">
+                        <span>☕</span> Buy me a coffee
+                    </a>
+
+                    <p class="copyright">v1.1 • Made with ❤️</p>
+                </div>
+
                 <button class="btn-logout" onclick="auth.logout()">Log Out</button>
             </div>
         </div>
@@ -377,25 +447,53 @@
         });
     }
 
-    // --- UI HELPER FOR MOBILE TABS ---
+    // --- UI HELPER (Mobile Tabs & Ratings) ---
     const ui = {
         switchTab: function(tabName) {
-            // Remove active from all nav items
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-            // Remove active-panel from all panels
             document.querySelectorAll('.panel').forEach(el => el.classList.remove('active-panel'));
-
-            // Add active to clicked nav
             if(tabName === 'pet') document.querySelectorAll('.nav-item')[0].classList.add('active');
             if(tabName === 'tasks') document.querySelectorAll('.nav-item')[1].classList.add('active');
             if(tabName === 'profile') document.querySelectorAll('.nav-item')[2].classList.add('active');
-
-            // Show panel
             document.getElementById(`panel-${tabName}`).classList.add('active-panel');
+        },
+        rate: function(n) {
+            const stars = document.querySelectorAll('.star');
+            stars.forEach((s, index) => {
+                if(index < n) s.classList.add('active');
+                else s.classList.remove('active');
+            });
+            document.getElementById('rate-msg').innerText = "Thanks for rating!";
+            localStorage.setItem('panda_rating', n);
+            if(n === 5) {
+                setTimeout(() => {
+                    if(confirm("Glad you like it! Want to share this app with friends?")) {
+                        this.shareApp();
+                    }
+                }, 500);
+            }
+        },
+        shareApp: function() {
+            if (navigator.share) {
+                navigator.share({
+                    title: 'Panda RPG',
+                    text: 'Join me on Panda RPG! Turn your tasks into an adventure.',
+                    url: window.location.href 
+                }).catch((error) => console.log('Error sharing', error));
+            } else {
+                alert("Copy this link to share: " + window.location.href);
+            }
+        },
+        loadRating: function() {
+            const saved = localStorage.getItem('panda_rating');
+            if(saved) {
+                this.rate(parseInt(saved));
+                document.getElementById('rate-msg').innerText = ""; 
+            }
         }
     };
 
-    // --- EXISTING LOGIC ---
+    // --- DATA & AUTH LOGIC ---
     const quotes = [
         { t: "The secret of getting ahead is getting started.", a: "Mark Twain" },
         { t: "It’s hard to beat a person who never gives up.", a: "Babe Ruth" },
@@ -462,17 +560,19 @@
             }
             document.getElementById('auth-overlay').classList.add('hidden');
             
-            // For Desktop logic
+            // Logic for layout
             if(window.innerWidth > 900) {
                 document.getElementById('app-grid').style.display = 'grid';
             } else {
                 document.getElementById('app-grid').style.display = 'flex';
-                // Trigger first tab
                 ui.switchTab('pet');
             }
 
             notifier.init();
             app.init(username, userData);
+            
+            // Load rating state
+            ui.loadRating();
         },
         logout: function() {
             app.save();
