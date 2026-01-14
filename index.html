@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#4f46e5">
+    <title>Panda RPG | Ultimate Focus</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3069/3069172.png">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fredoka+One&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #f3f4f6;
+            --surface: #ffffff;
+            --primary: #4f46e5;
+            --primary-dark: #4338ca;
+            --accent: #10b981;
+            --danger: #ef4444;
+            --text-main: #111827;
+            --text-muted: #6b7280;
+            --border: #e5e7eb;
+            --coin: #f59e0b;
+        }
+
+        * { box-sizing: border-box; outline: none; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* --- AUTH OVERLAY --- */
+        #auth-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(243, 244, 246, 1);
+            z-index: 2000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 0.3s;
+        }
+        #auth-overlay.hidden { opacity: 0; pointer-events: none; }
+        
+        .auth-card {
+            background: var(--surface); padding: 2rem; border-radius: 1.5rem;
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+            width: 90%; max-width: 380px; text-align: center;
+        }
+        .auth-input { width: 100%; padding: 1rem; margin: 0.5rem 0; border: 1px solid var(--border); border-radius: 0.5rem; font-size: 1rem; }
+        .btn-auth { width: 100%; padding: 1rem; background: var(--primary); color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 600; margin-top: 1rem; font-size: 1rem; }
+        .auth-link { color: var(--primary); font-size: 0.875rem; cursor: pointer; margin-top: 1rem; display: block; text-decoration: underline; padding: 10px;}
+
+        /* --- MAIN LAYOUT --- */
+        #app-grid {
+            display: none; width: 100%; height: 100vh;
+            grid-template-columns: 320px 1fr 300px;
+        }
+
+        /* PANELS */
+        .panel { 
+            background: var(--surface); 
+            border-right: 1px solid var(--border); 
+            display: flex; flex-direction: column; 
+            padding: 1.5rem; 
+            overflow-y: auto; 
+            height: 100%;
+        }
+        .panel-right { border-right: none; border-left: 1px solid var(--border); background: #f9fafb; justify-content: space-between; }
+        .panel-middle { background: var(--bg-color); padding: 2rem; position: relative; }
+
+        /* --- MOBILE NAVIGATION (Hidden on Desktop) --- */
+        .mobile-nav {
+            display: none;
+            position: fixed; bottom: 0; left: 0; width: 100%;
+            background: white; border-top: 1px solid var(--border);
+            justify-content: space-around; padding: 10px 0;
+            z-index: 100;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        .nav-item {
+            text-align: center; color: var(--text-muted); font-size: 0.75rem; cursor: pointer;
+            width: 33%;
+        }
+        .nav-item.active { color: var(--primary); font-weight: bold; }
+        .nav-icon { font-size: 1.5rem; display: block; margin-bottom: 2px; }
+
+        /* --- RESPONSIVE LOGIC --- */
+        @media (max-width: 900px) {
+            #app-grid {
+                display: none; /* Controlled by JS flex */
+                grid-template-columns: 1fr;
+                grid-template-rows: 1fr;
+                height: calc(100vh - 65px); /* Space for nav */
+            }
+            
+            .panel { 
+                display: none; /* Hide all by default on mobile */
+                width: 100%; 
+                border: none;
+                padding-bottom: 80px; /* Scroll space */
+            }
+            
+            /* The 'active' class determines which panel shows on mobile */
+            .panel.active-panel { display: flex; }
+            
+            .mobile-nav { display: flex; }
+            .panel-middle { padding: 1rem; }
+            
+            /* Adjustments for touch */
+            .btn-shop { padding: 10px; }
+            .task-card { padding: 1rem; }
+        }
+
+        /* --- COMPONENTS --- */
+        .panda-stage {
+            min-height: 200px; display: flex; justify-content: center; align-items: center;
+            background: linear-gradient(180deg, #e0f2fe 0%, #f0f9ff 100%);
+            border-radius: 1rem; margin-bottom: 1.5rem; position: relative;
+            border: 1px solid #bae6fd;
+        }
+        .level-badge {
+            position: absolute; top: 10px; right: 10px;
+            background: var(--primary); color: white; padding: 4px 12px;
+            border-radius: 20px; font-weight: bold; font-size: 0.8rem;
+        }
+
+        .stat-group { margin-bottom: 1.2rem; }
+        .stat-label { font-size: 0.85rem; color: var(--text-muted); display: flex; justify-content: space-between; margin-bottom: 6px; font-weight: 600; }
+        .bar-track { height: 10px; background: #e5e7eb; border-radius: 6px; overflow: hidden; }
+        .bar-fill { height: 100%; border-radius: 6px; transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
+
+        .shop-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: auto;}
+        .btn-shop {
+            padding: 15px; border: 1px solid var(--border); background: white; border-radius: 12px;
+            cursor: pointer; transition: 0.2s; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        .btn-shop:active { background: #eff6ff; transform: scale(0.95); }
+        .btn-shop h4 { margin: 0; font-size: 1.4rem; margin-bottom: 5px; }
+        
+        .task-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+        .btn-add-task {
+            background: var(--text-main); color: white; padding: 10px 15px;
+            border-radius: 8px; border: none; cursor: pointer; font-weight: 600;
+        }
+
+        #task-form {
+            background: white; padding: 1.5rem; border-radius: 1rem; margin-bottom: 2rem;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); display: none;
+            border: 1px solid var(--border);
+        }
+        #task-form.active { display: block; animation: slideDown 0.3s; }
+        .input-std { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-family: 'Inter', sans-serif; margin-bottom: 10px; }
+
+        .task-card {
+            background: white; border-radius: 12px; padding: 1.25rem; margin-bottom: 1rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: 0.2s; border-left: 5px solid var(--primary);
+            display: flex; align-items: flex-start; gap: 15px; position: relative;
+        }
+        .task-card.completed { opacity: 0.6; border-left-color: var(--border); background: #f9fafb; }
+        
+        .check-circle {
+            width: 28px; height: 28px; border: 2px solid var(--border); border-radius: 50%;
+            cursor: pointer; flex-shrink: 0; display: flex; justify-content: center; align-items: center;
+        }
+        .completed .check-circle { background: var(--accent); border-color: var(--accent); color: white; }
+
+        .task-content { flex: 1; overflow: hidden; }
+        .task-title { font-weight: 600; font-size: 1.05rem; margin: 0 0 4px 0; word-wrap: break-word; }
+        .task-meta { font-size: 0.75rem; color: #9ca3af; display: flex; flex-wrap: wrap; gap: 10px; font-weight: 500; align-items: center;}
+        
+        .delete-btn { padding: 10px; color: #d1d5db; cursor: pointer; font-size: 1.5rem; line-height: 0.5; margin-right: -10px; }
+
+        /* Profile & Avatar */
+        .profile-section { text-align: center; margin-bottom: 20px;}
+        .avatar-container {
+            position: relative; width: 90px; height: 90px; margin: 0 auto 1rem; cursor: pointer;
+        }
+        .avatar {
+            width: 100%; height: 100%; background: var(--primary); color: white;
+            border-radius: 50%; display: flex; justify-content: center; align-items: center;
+            font-size: 2.5rem; font-weight: bold; overflow: hidden;
+            border: 4px solid white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .avatar img { width: 100%; height: 100%; object-fit: cover; }
+        
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 1.5rem; }
+        .stat-box { background: white; padding: 12px; border-radius: 10px; border: 1px solid var(--border); text-align: center; }
+        .stat-val { display: block; font-size: 1.4rem; font-weight: 800; color: var(--text-main); }
+        .stat-name { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600; }
+
+        .quote-box {
+            margin-top: auto; margin-bottom: 20px;
+            padding: 1.5rem; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            border-radius: 12px; color: white; text-align: center;
+        }
+        .btn-logout {
+            width: 100%; padding: 12px; background: white; border: 1px solid var(--danger);
+            color: var(--danger); border-radius: 8px; cursor: pointer; font-weight: 600;
+        }
+
+        /* PANDA CSS */
+        .panda-wrapper { position: relative; width: 100px; height: 100px; transition: transform 0.3s; }
+        .panda-head { width: 100%; height: 100%; background: #fff; border: 3px solid #1f2937; border-radius: 50% 50% 45% 45%; position: relative; overflow: hidden; z-index: 2; }
+        .ear { position: absolute; top: -5px; width: 35px; height: 35px; background: #1f2937; border-radius: 50%; z-index: 1; }
+        .ear.left { left: 5px; } .ear.right { right: 5px; }
+        .eye-patch { position: absolute; top: 35px; width: 30px; height: 40px; background: #1f2937; border-radius: 50% 50% 40% 40%; transform: rotate(-15deg); }
+        .eye-patch.right { right: 15px; transform: rotate(15deg); } .eye-patch.left { left: 15px; }
+        .eye-white { position: absolute; top: 5px; left: 5px; width: 8px; height: 8px; background: #fff; border-radius: 50%; }
+        .nose { position: absolute; top: 65px; left: 50%; transform: translateX(-50%); width: 18px; height: 10px; background: #1f2937; border-radius: 40% 40% 50% 50%; }
+        .mouth { position: absolute; top: 75px; left: 50%; transform: translateX(-50%); width: 12px; height: 5px; border-bottom: 2px solid #1f2937; border-radius: 50%; }
+
+        /* Animations */
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        .anim-happy { animation: bounce 0.5s; }
+        @keyframes bounce { 0%, 100% {transform: translateY(0);} 50% {transform: translateY(-10px);} }
+        .anim-eat { animation: eat 0.5s; }
+        @keyframes eat { 50% {transform: scale(1.1);} }
+        .anim-levelup { animation: spin 1s ease-in-out; }
+        @keyframes spin { 0% {transform: rotate(0deg);} 100% {transform: rotate(360deg);} }
+
+    </style>
+</head>
+<body>
+
+    <div id="auth-overlay">
+        <div class="auth-card">
+            <h2 id="auth-title">Welcome to Panda RPG</h2>
+            <div class="panda-wrapper" style="margin: 0 auto 20px auto; transform: scale(0.8);">
+                <div class="ear left"></div><div class="ear right"></div>
+                <div class="panda-head">
+                    <div class="eye-patch left"><div class="eye-white"></div></div>
+                    <div class="eye-patch right"><div class="eye-white"></div></div>
+                    <div class="nose"></div><div class="mouth"></div>
+                </div>
+            </div>
+            <input type="text" id="username" class="auth-input" placeholder="Username">
+            <input type="password" id="password" class="auth-input" placeholder="Password">
+            <button class="btn-auth" onclick="auth.handleSubmit()">Login</button>
+            <span class="auth-link" onclick="auth.toggleMode()">New here? Create an account</span>
+            <p id="auth-error" style="color:red; font-size:0.8rem; height: 1em; margin-top:10px;"></p>
+        </div>
+    </div>
+
+    <div id="app-grid">
+        
+        <div class="panel active-panel" id="panel-pet">
+            <h2 style="font-family: 'Fredoka One', cursive; margin-top:0;">My Companion</h2>
+            
+            <div class="panda-stage">
+                <div class="level-badge">Lvl <span id="lvl-disp">1</span></div>
+                <div class="panda-wrapper" id="panda-char">
+                    <div class="ear left"></div><div class="ear right"></div>
+                    <div class="panda-head">
+                        <div class="eye-patch left"><div class="eye-white"></div></div>
+                        <div class="eye-patch right"><div class="eye-white"></div></div>
+                        <div class="nose"></div><div class="mouth"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stat-group">
+                <div class="stat-label"><span>XP Progress</span> <span id="xp-disp">0/100</span></div>
+                <div class="bar-track"><div class="bar-fill" id="xp-bar" style="width: 0%; background: #8b5cf6;"></div></div>
+            </div>
+
+            <div class="stat-group">
+                <div class="stat-label"><span>Hunger</span> <span id="hunger-val">50%</span></div>
+                <div class="bar-track"><div class="bar-fill" id="hunger-bar" style="width: 50%; background: #ef4444;"></div></div>
+            </div>
+
+            <div class="stat-group">
+                <div class="stat-label"><span>Happiness</span> <span id="happy-val">50%</span></div>
+                <div class="bar-track"><div class="bar-fill" id="happy-bar" style="width: 50%; background: #10b981;"></div></div>
+            </div>
+
+            <div class="shop-actions">
+                <div class="btn-shop" onclick="app.feed()">
+                    <h4>🎋</h4>
+                    <span>Feed (-20)</span>
+                </div>
+                <div class="btn-shop" onclick="app.play()">
+                    <h4>🎾</h4>
+                    <span>Play (-30)</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel panel-middle" id="panel-tasks">
+            <div class="task-header">
+                <div>
+                    <h1 style="margin:0; font-size: 1.5rem; font-weight: 800;">Task Board</h1>
+                    <p style="margin:5px 0 0 0; color: var(--text-muted); font-size: 0.9rem;">Manage your work.</p>
+                </div>
+                <button class="btn-add-task" onclick="app.toggleForm()">+ Add</button>
+            </div>
+
+            <div id="task-form">
+                <input type="text" id="t-title" class="input-std" placeholder="Task Title (e.g. Complete Biology Project)">
+                <input type="text" id="t-desc" class="input-std" placeholder="Description (Optional)">
+                <div style="display:flex; gap:10px;">
+                    <input type="date" id="t-date" class="input-std" style="width: 50%;">
+                    <button class="btn-auth" style="margin-top:0; width:50%;" onclick="app.addTask()">Save</button>
+                </div>
+            </div>
+
+            <div id="task-list">
+                </div>
+        </div>
+
+        <div class="panel panel-right" id="panel-profile">
+            <div class="profile-section">
+                <input type="file" id="img-upload" accept="image/*" style="display:none" onchange="app.handleImageUpload(this)">
+                
+                <div class="avatar-container" onclick="document.getElementById('img-upload').click()">
+                    <div class="avatar" id="user-avatar">U</div>
+                </div>
+                
+                <h3 id="profile-name" style="margin:0; font-size:1.2rem;">User</h3>
+                <div class="streak-pill" style="margin-top:10px; display:inline-block; background: #fff7ed; padding: 5px 10px; border-radius: 15px; border: 1px solid #ffedd5; color: #c2410c; font-weight:bold; font-size:0.8rem;">
+                    <span>🔥</span> <span id="streak-disp">0</span> Day Streak
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <span class="stat-val" id="coin-disp" style="color: var(--coin);">0</span>
+                        <span class="stat-name">Coins</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-val" id="completed-disp">0</span>
+                        <span class="stat-name">Done</span>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <div class="quote-box">
+                    <p class="quote-text" id="quote-text">Loading...</p>
+                    <p class="quote-author" id="quote-author">-</p>
+                </div>
+
+                <button class="btn-logout" onclick="auth.logout()">Log Out</button>
+            </div>
+        </div>
+    </div>
+
+    <nav class="mobile-nav">
+        <div class="nav-item active" onclick="ui.switchTab('pet')">
+            <span class="nav-icon">🐼</span>
+            <span>Pet</span>
+        </div>
+        <div class="nav-item" onclick="ui.switchTab('tasks')">
+            <span class="nav-icon">📝</span>
+            <span>Tasks</span>
+        </div>
+        <div class="nav-item" onclick="ui.switchTab('profile')">
+            <span class="nav-icon">👤</span>
+            <span>Profile</span>
+        </div>
+    </nav>
+
+<script>
+    // --- SERVICE WORKER REGISTRATION (PWA) ---
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js')
+                .then(reg => console.log('SW Registered', reg))
+                .catch(err => console.log('SW Failed', err));
+        });
+    }
+
+    // --- UI HELPER FOR MOBILE TABS ---
+    const ui = {
+        switchTab: function(tabName) {
+            // Remove active from all nav items
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            // Remove active-panel from all panels
+            document.querySelectorAll('.panel').forEach(el => el.classList.remove('active-panel'));
+
+            // Add active to clicked nav
+            if(tabName === 'pet') document.querySelectorAll('.nav-item')[0].classList.add('active');
+            if(tabName === 'tasks') document.querySelectorAll('.nav-item')[1].classList.add('active');
+            if(tabName === 'profile') document.querySelectorAll('.nav-item')[2].classList.add('active');
+
+            // Show panel
+            document.getElementById(`panel-${tabName}`).classList.add('active-panel');
+        }
+    };
+
+    // --- EXISTING LOGIC ---
+    const quotes = [
+        { t: "The secret of getting ahead is getting started.", a: "Mark Twain" },
+        { t: "It’s hard to beat a person who never gives up.", a: "Babe Ruth" },
+        { t: "Focus on being productive instead of busy.", a: "Tim Ferriss" },
+        { t: "Small steps in the right direction can turn out to be the biggest step of your life.", a: "Unknown" }
+    ];
+
+    const notifier = {
+        init: function() {
+            if ("Notification" in window && Notification.permission !== "granted") {
+                Notification.requestPermission();
+            }
+        },
+        send: function(title, body) {
+            if (Notification.permission === "granted") {
+                new Notification(title, { body: body, icon: 'https://cdn-icons-png.flaticon.com/512/3069/3069172.png' });
+            }
+        }
+    };
+
+    const auth = {
+        isRegistering: false,
+        toggleMode: function() {
+            this.isRegistering = !this.isRegistering;
+            document.getElementById('auth-title').innerText = this.isRegistering ? 'Join Panda RPG' : 'Welcome Back';
+            document.querySelector('.btn-auth').innerText = this.isRegistering ? 'Register' : 'Login';
+            document.querySelector('.auth-link').innerText = this.isRegistering ? 'Have an account? Login' : 'Create an account instead';
+        },
+        handleSubmit: function() {
+            const u = document.getElementById('username').value.trim();
+            const p = document.getElementById('password').value.trim();
+            if(!u || !p) return;
+            const db = JSON.parse(localStorage.getItem('pandaRPG_DB')) || {};
+            if(this.isRegistering) {
+                if(db[u]) { document.getElementById('auth-error').innerText = "User exists!"; return; }
+                db[u] = {
+                    password: p, name: u, avatar: null,
+                    coins: 0, completedCount: 0, streak: 1, lastLogin: new Date().toDateString(),
+                    pet: { hunger: 50, happy: 50, xp: 0, level: 1 },
+                    tasks: []
+                };
+                localStorage.setItem('pandaRPG_DB', JSON.stringify(db));
+                this.login(u, db[u]);
+            } else {
+                if(db[u] && db[u].password === p) this.login(u, db[u]);
+                else document.getElementById('auth-error').innerText = "Invalid credentials";
+            }
+        },
+        login: function(username, userData) {
+            const today = new Date().toDateString();
+            if(userData.lastLogin !== today) {
+                const d1 = new Date(today);
+                const d2 = new Date(userData.lastLogin);
+                const diffDays = Math.ceil(Math.abs(d1 - d2) / (1000 * 60 * 60 * 24));
+                if(diffDays === 1) userData.streak++;
+                else if (diffDays > 1) {
+                    userData.streak = 1;
+                    userData.pet.hunger = Math.min(100, userData.pet.hunger + (20 * diffDays));
+                }
+                userData.lastLogin = today;
+                const db = JSON.parse(localStorage.getItem('pandaRPG_DB'));
+                db[username] = userData;
+                localStorage.setItem('pandaRPG_DB', JSON.stringify(db));
+            }
+            document.getElementById('auth-overlay').classList.add('hidden');
+            
+            // For Desktop logic
+            if(window.innerWidth > 900) {
+                document.getElementById('app-grid').style.display = 'grid';
+            } else {
+                document.getElementById('app-grid').style.display = 'flex';
+                // Trigger first tab
+                ui.switchTab('pet');
+            }
+
+            notifier.init();
+            app.init(username, userData);
+        },
+        logout: function() {
+            app.save();
+            location.reload();
+        }
+    };
+
+    const app = {
+        user: null, username: null,
+        init: function(username, data) {
+            this.username = username; this.user = data;
+            this.render(); this.renderQuote();
+            setInterval(() => this.passiveDecay(), 30000);
+        },
+        save: function() {
+            const db = JSON.parse(localStorage.getItem('pandaRPG_DB'));
+            db[this.username] = this.user;
+            localStorage.setItem('pandaRPG_DB', JSON.stringify(db));
+            this.renderUI();
+        },
+        toggleForm: function() {
+            const f = document.getElementById('task-form');
+            f.style.display = f.style.display === 'block' ? 'none' : 'block';
+            if(f.style.display === 'block') f.classList.add('active');
+        },
+        addTask: function() {
+            const t = document.getElementById('t-title').value;
+            const d = document.getElementById('t-desc').value;
+            const date = document.getElementById('t-date').value;
+            if(!t) return alert("Title required");
+            this.user.tasks.unshift({
+                id: Date.now(), title: t, desc: d || "No description", date: date || "No date", 
+                completed: false, rewardClaimed: false
+            });
+            document.getElementById('t-title').value = '';
+            document.getElementById('t-desc').value = '';
+            this.toggleForm();
+            this.save();
+            this.renderTasks();
+        },
+        completeTask: function(id) {
+            const task = this.user.tasks.find(t => t.id === id);
+            if(task && !task.completed) {
+                task.completed = true;
+                if(!task.rewardClaimed) {
+                    task.rewardClaimed = true;
+                    this.user.coins += 50;
+                    this.user.completedCount++;
+                    this.gainXP(25);
+                    this.animate('happy');
+                }
+                this.save();
+                this.renderTasks();
+            }
+        },
+        deleteTask: function(id) {
+            if(confirm("Delete task?")) {
+                this.user.tasks = this.user.tasks.filter(t => t.id !== id);
+                this.save();
+                this.renderTasks();
+            }
+        },
+        handleImageUpload: function(input) {
+            const file = input.files[0];
+            if(file) {
+                if(file.size > 2000000) return alert("Image too big! Max 2MB.");
+                const reader = new FileReader();
+                reader.onloadend = function() {
+                    app.user.avatar = reader.result;
+                    app.save();
+                    app.render();
+                }
+                reader.readAsDataURL(file);
+            }
+        },
+        gainXP: function(amt) {
+            this.user.pet.xp += amt;
+            const threshold = this.user.pet.level * 100;
+            if(this.user.pet.xp >= threshold) {
+                this.user.pet.xp -= threshold;
+                this.user.pet.level++;
+                this.animate('levelup');
+            }
+        },
+        feed: function() {
+            if(this.user.coins >= 20) {
+                if(this.user.pet.hunger <= 0) return alert("Full!");
+                this.user.coins -= 20;
+                this.user.pet.hunger = Math.max(0, this.user.pet.hunger - 30);
+                this.animate('eat');
+                this.save();
+            } else alert("Need 20 Coins!");
+        },
+        play: function() {
+            if(this.user.coins >= 30) {
+                this.user.coins -= 30;
+                this.user.pet.happy = Math.min(100, this.user.pet.happy + 20);
+                this.user.pet.hunger = Math.min(100, this.user.pet.hunger + 10);
+                this.gainXP(10);
+                this.animate('happy');
+                this.save();
+            } else alert("Need 30 Coins!");
+        },
+        passiveDecay: function() {
+            this.user.pet.hunger = Math.min(100, this.user.pet.hunger + 1);
+            this.user.pet.happy = Math.max(0, this.user.pet.happy - 1);
+            this.save();
+        },
+        animate: function(type) {
+            const p = document.getElementById('panda-char');
+            p.className = 'panda-wrapper ' + 'anim-' + type;
+            setTimeout(() => p.className = 'panda-wrapper', 1000);
+        },
+        render: function() {
+            document.getElementById('profile-name').innerText = this.username;
+            document.getElementById('streak-disp').innerText = this.user.streak;
+            const avDiv = document.getElementById('user-avatar');
+            if(this.user.avatar) {
+                avDiv.innerHTML = `<img src="${this.user.avatar}">`;
+            } else {
+                avDiv.innerText = this.username.charAt(0).toUpperCase();
+            }
+            this.renderUI();
+            this.renderTasks();
+        },
+        renderUI: function() {
+            document.getElementById('coin-disp').innerText = this.user.coins;
+            document.getElementById('completed-disp').innerText = this.user.completedCount;
+            document.getElementById('hunger-val').innerText = this.user.pet.hunger + '%';
+            document.getElementById('hunger-bar').style.width = this.user.pet.hunger + '%';
+            document.getElementById('happy-val').innerText = this.user.pet.happy + '%';
+            document.getElementById('happy-bar').style.width = this.user.pet.happy + '%';
+            const threshold = this.user.pet.level * 100;
+            const xpPct = (this.user.pet.xp / threshold) * 100;
+            document.getElementById('lvl-disp').innerText = this.user.pet.level;
+            document.getElementById('xp-disp').innerText = `${this.user.pet.xp}/${threshold}`;
+            document.getElementById('xp-bar').style.width = xpPct + '%';
+        },
+        renderTasks: function() {
+            const list = document.getElementById('task-list');
+            list.innerHTML = '';
+            const sorted = this.user.tasks.sort((a,b) => a.completed - b.completed);
+            sorted.forEach(task => {
+                const el = document.createElement('div');
+                el.className = `task-card ${task.completed ? 'completed' : ''}`;
+                el.innerHTML = `
+                    <div class="check-circle" onclick="app.completeTask(${task.id})">
+                        ${task.completed ? '✔' : ''}
+                    </div>
+                    <div class="task-content">
+                        <h4 class="task-title">${task.title}</h4>
+                        <p class="task-desc" style="font-size:0.85rem; color:#6b7280; margin:0 0 5px;">${task.desc}</p>
+                        <div class="task-meta">
+                            <span>📅 ${task.date}</span>
+                            ${task.rewardClaimed ? '<span style="color:var(--accent)">✨ Claimed</span>' : '<span>💰 50 Coins</span>'}
+                        </div>
+                    </div>
+                    <span class="delete-btn" onclick="app.deleteTask(${task.id})">&times;</span>
+                `;
+                list.appendChild(el);
+            });
+        },
+        renderQuote: function() {
+            const q = quotes[Math.floor(Math.random() * quotes.length)];
+            document.getElementById('quote-text').innerText = q.t;
+            document.getElementById('quote-author').innerText = "- " + q.a;
+        }
+    };
+</script>
+</body>
+</html>
